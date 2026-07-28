@@ -263,9 +263,9 @@ body {
 const SUPABASE_URL = 'https://dwfrqidfhpixqsjmdqzz.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_U0aJ0Jx1I2RNeNeXNtax4g_BcvS_2YI';
 
-let supabase = null;
+let sbClient = null;
 if (SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
 // ============================================================
@@ -484,9 +484,9 @@ async function saveRecord(score) {
   localStorage.setItem('game_records', JSON.stringify(localRecords));
 
   // 嘗試存 Supabase
-  if (supabase) {
+  if (sbClient) {
     try {
-      const { error } = await supabase.from('game_records').insert({
+      const { error } = await sbClient.from('game_records').insert({
         seat_number: currentSeat,
         score: score,
         game_time: elapsedSeconds
@@ -511,9 +511,9 @@ async function showLeaderboard() {
   const area = $('leaderboardArea');
   let records = [];
 
-  if (supabase) {
+  if (sbClient) {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sbClient
         .from('game_records')
         .select('*')
         .order('score', { ascending: false })
@@ -588,7 +588,7 @@ $('seatInput').addEventListener('keydown', e => {
 });
 
 // 顯示 Supabase 設定狀態
-if (!supabase) {
+if (!sbClient) {
   console.log('Supabase 未設定。請在 index.html 中設定 SUPABASE_ANON_KEY。');
   console.log('到 https://supabase.com/dashboard/project/dwfrqidfhpixqsjmdqzz/settings/api 複製 anon key');
 }
