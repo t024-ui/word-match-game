@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英文單字配對遊戲</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, 'Microsoft JhengHei', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.container {
+  max-width: 640px;
+  width: 100%;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  overflow: hidden;
+}
+
+.header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  padding: 24px;
+  text-align: center;
+}
+
+.header h1 { font-size: 28px; margin-bottom: 4px; }
+.header p { font-size: 14px; opacity: .9; }
+
+.main { padding: 24px; }
+
+/* Start Screen */
+.start-screen { text-align: center; }
+.start-screen label { display: block; font-size: 16px; color: #555; margin-bottom: 8px; }
+.start-screen input {
+  width: 100%; max-width: 280px;
+  padding: 14px 20px;
+  font-size: 20px;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  text-align: center;
+  transition: border-color .2s;
+}
+.start-screen input:focus { outline: none; border-color: #667eea; }
+
+/* Game Screen */
+.game-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.info-box {
+  background: #f5f3ff;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #5b21b6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.card {
+  aspect-ratio: 3 / 4;
+  perspective: 600px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform .5s;
+  transform-style: preserve-3d;
+}
+
+.card.flipped .card-inner { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px;
+  word-break: break-word;
+}
+
+.card-back {
+  background: linear-gradient(145deg, #667eea, #764ba2);
+  color: white;
+  font-size: 32px;
+  box-shadow: 0 4px 12px rgba(102,126,234,.3);
+}
+
+.card-front {
+  transform: rotateY(180deg);
+}
+
+.card.en .card-front { background: linear-gradient(145deg, #4facfe, #00f2fe); color: white; }
+.card.zh .card-front { background: linear-gradient(145deg, #f093fb, #f5576c); color: white; }
+
+.card.matched { pointer-events: none; }
+.card.matched .card-inner { transform: rotateY(180deg); }
+.card.matched .card-front {
+  background: linear-gradient(145deg, #43e97b, #38f9d7) !important;
+  box-shadow: 0 0 20px rgba(67,233,123,.5);
+  animation: matchPulse .5s ease;
+}
+
+@keyframes matchPulse {
+  0% { transform: rotateY(180deg) scale(1); }
+  50% { transform: rotateY(180deg) scale(1.08); }
+  100% { transform: rotateY(180deg) scale(1); }
+}
+
+/* Result Screen */
+.result-screen { text-align: center; }
+.result-screen h2 { font-size: 26px; color: #5b21b6; margin-bottom: 8px; }
+.result-screen .result-stats { font-size: 18px; color: #666; margin-bottom: 20px; line-height: 2; }
+.result-screen .result-stats span { color: #f5576c; font-weight: 700; font-size: 22px; }
+
+/* Leaderboard */
+.leaderboard { margin-top: 24px; }
+.leaderboard h3 { font-size: 18px; color: #5b21b6; margin-bottom: 12px; }
+.leaderboard table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.leaderboard th { background: #f5f3ff; padding: 8px; text-align: center; color: #6d28d9; }
+.leaderboard td { padding: 8px; text-align: center; border-bottom: 1px solid #eee; }
+
+/* Buttons */
+.btn {
+  display: inline-block;
+  padding: 14px 36px;
+  font-size: 18px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+  letter-spacing: 1px;
+}
+.btn:active { transform: scale(.96); }
+.btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; box-shadow: 0 6px 20px rgba(102,126,234,.35); }
+.btn-secondary { background: #f5f3ff; color: #5b21b6; }
+.btn-small { padding: 8px 20px; font-size: 14px; }
+
+.btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+
+/* Messages */
+.msg { margin-top: 12px; font-size: 14px; padding: 10px; border-radius: 10px; }
+.msg-success { background: #d1fae5; color: #065f46; }
+.msg-error { background: #fee2e2; color: #991b1b; }
+.msg-info { background: #dbeafe; color: #1e40af; }
+
+/* Confetti */
+.confetti-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1000; }
+.confetti {
+  position: absolute;
+  width: 12px; height: 12px;
+  border-radius: 3px;
+  animation: confettiFall 2.5s ease-out forwards;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(720deg); opacity: 0; }
+}
+
+.hidden { display: none !important; }
+
+@media (max-width: 480px) {
+  .grid { gap: 6px; }
+  .card-face { font-size: 14px; }
+  .card-back { font-size: 24px; }
+  .header h1 { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🎮 英文單字配對遊戲</h1>
+    <p>翻開卡片，找出英文與中文的配對！</p>
+  </div>
+  <div class="main">
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="start-screen">
+      <label for="seatInput">請輸入你的班級座號</label>
+      <input type="text" id="seatInput" placeholder="例如：5 或 12" maxlength="10" autocomplete="off">
+      <div style="margin-top:20px">
+        <button class="btn btn-primary" onclick="startGame()">開始遊戲 🎯</button>
+      </div>
+      <div id="leaderboardArea" style="margin-top:24px"></div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="hidden">
+      <div class="game-info">
+        <div class="info-box">🔢 座號：<span id="seatDisplay"></span></div>
+        <div class="info-box">⏱ <span id="timer">00:00</span></div>
+        <div class="info-box">⭐ 分數：<span id="scoreDisplay">800</span></div>
+      </div>
+      <div id="grid" class="grid"></div>
+      <div class="btn-group" style="margin-top:16px">
+        <button class="btn btn-secondary btn-small" onclick="resetGame()">重新開始</button>
+        <button class="btn btn-secondary btn-small" onclick="backToStart()">換座號</button>
+      </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="resultScreen" class="hidden result-screen">
+      <h2>🎉 恭喜完成！</h2>
+      <div class="result-stats">
+        座號：<span id="resultSeat"></span><br>
+        花費時間：<span id="resultTime"></span> 秒<br>
+        最終分數：<span id="resultScore"></span> 分
+      </div>
+      <div id="saveMsg"></div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="resetGame()">再玩一次</button>
+        <button class="btn btn-secondary" onclick="backToStart()">換座號</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="confettiContainer" class="confetti-container"></div>
+
+<script>
+// ============================================================
+// 設定區 — 請老師把 ANON_KEY 換成 Supabase 的 anon 金鑰
+// 到 https://supabase.com/dashboard/project/dwfrqidfhpixqsjmdqzz/settings/api 複製
+// ============================================================
+const SUPABASE_URL = 'https://dwfrqidfhpixqsjmdqzz.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+
+let supabase = null;
+if (SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+// ============================================================
+// 單字配對資料
+// ============================================================
+const wordPairs = [
+  { en: 'apple', zh: '蘋果' },
+  { en: 'book', zh: '書本' },
+  { en: 'cat', zh: '貓咪' },
+  { en: 'dog', zh: '小狗' },
+  { en: 'sun', zh: '太陽' },
+  { en: 'star', zh: '星星' },
+  { en: 'water', zh: '水' },
+  { en: 'school', zh: '學校' }
+];
+
+// ============================================================
+// 遊戲狀態
+// ============================================================
+let cards = [];
+let flippedCards = [];
+let matchedPairs = 0;
+let timerInterval = null;
+let startTime = null;
+let elapsedSeconds = 0;
+let currentSeat = '';
+let isLocked = false;
+
+// ============================================================
+// 工具函式
+// ============================================================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function $(id) { return document.getElementById(id); }
+
+function show(el) { el.classList.remove('hidden'); }
+function hide(el) { el.classList.add('hidden'); }
+
+function spawnConfetti() {
+  const container = $('confettiContainer');
+  const colors = ['#f5576c','#f093fb','#4facfe','#43e97b','#f6d365','#ffa502','#667eea','#764ba2'];
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.left = Math.random() * 100 + '%';
+    el.style.top = -(Math.random() * 40 + 10) + 'px';
+    el.style.width = (Math.random() * 10 + 6) + 'px';
+    el.style.height = (Math.random() * 10 + 6) + 'px';
+    el.style.background = colors[Math.floor(Math.random() * colors.length)];
+    el.style.animationDuration = (Math.random() * 2 + 2) + 's';
+    el.style.animationDelay = Math.random() * .8 + 's';
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+  }
+}
+
+// ============================================================
+// 遊戲邏輯
+// ============================================================
+function startGame() {
+  const seat = $('seatInput').value.trim();
+  if (!seat) { alert('請輸入座號！'); return; }
+  currentSeat = seat;
+
+  hide($('startScreen'));
+  hide($('resultScreen'));
+  show($('gameScreen'));
+
+  $('seatDisplay').textContent = currentSeat;
+  $('scoreDisplay').textContent = '800';
+  $('timer').textContent = '00:00';
+
+  matchedPairs = 0;
+  flippedCards = [];
+  elapsedSeconds = 0;
+  isLocked = false;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  startTime = null;
+
+  buildCards();
+  renderGrid();
+}
+
+function buildCards() {
+  cards = [];
+  wordPairs.forEach((pair, idx) => {
+    cards.push({ id: idx, type: 'en', text: pair.en, pairId: idx });
+    cards.push({ id: idx, type: 'zh', text: pair.zh, pairId: idx });
+  });
+  cards = shuffle(cards);
+}
+
+function renderGrid() {
+  const grid = $('grid');
+  grid.innerHTML = '';
+  cards.forEach((card, index) => {
+    const div = document.createElement('div');
+    div.className = 'card ' + card.type;
+    div.dataset.index = index;
+    div.dataset.pairId = card.pairId;
+    div.innerHTML = `
+      <div class="card-inner">
+        <div class="card-face card-back">?</div>
+        <div class="card-face card-front">${card.text}</div>
+      </div>`;
+    div.addEventListener('click', () => onCardClick(div, index));
+    grid.appendChild(div);
+  });
+}
+
+function onCardClick(cardEl, index) {
+  if (isLocked) return;
+  if (cardEl.classList.contains('flipped')) return;
+  if (cardEl.classList.contains('matched')) return;
+
+  // 開始計時
+  if (!startTime) {
+    startTime = Date.now();
+    timerInterval = setInterval(updateTimer, 500);
+  }
+
+  cardEl.classList.add('flipped');
+  flippedCards.push({ el: cardEl, index });
+
+  if (flippedCards.length === 2) {
+    isLocked = true;
+    checkMatch();
+  }
+}
+
+function checkMatch() {
+  const [a, b] = flippedCards;
+  const cardA = cards[a.index];
+  const cardB = cards[b.index];
+
+  if (cardA.pairId === cardB.pairId && cardA.type !== cardB.type) {
+    // 配對成功
+    setTimeout(() => {
+      a.el.classList.add('matched');
+      b.el.classList.add('matched');
+      matchedPairs++;
+      updateScore();
+      flippedCards = [];
+      isLocked = false;
+
+      if (matchedPairs === wordPairs.length) {
+        gameComplete();
+      }
+    }, 400);
+  } else {
+    // 配對失敗
+    setTimeout(() => {
+      a.el.classList.remove('flipped');
+      b.el.classList.remove('flipped');
+      flippedCards = [];
+      isLocked = false;
+      updateScore();
+    }, 700);
+  }
+}
+
+function updateScore() {
+  const base = 800;
+  const penalty = elapsedSeconds * 2;
+  const mistakes = cards.filter(c => c.matched === false).length; // not needed
+  const score = Math.max(100, base - penalty);
+  $('scoreDisplay').textContent = score;
+}
+
+function updateTimer() {
+  if (!startTime) return;
+  elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+  $('timer').textContent = formatTime(elapsedSeconds);
+  updateScore();
+}
+
+function gameComplete() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+  const finalScore = Math.max(100, 800 - elapsedSeconds * 2);
+
+  setTimeout(() => {
+    hide($('gameScreen'));
+    show($('resultScreen'));
+
+    $('resultSeat').textContent = currentSeat;
+    $('resultTime').textContent = elapsedSeconds;
+    $('resultScore').textContent = finalScore;
+
+    spawnConfetti();
+    saveRecord(finalScore);
+  }, 600);
+}
+
+async function saveRecord(score) {
+  const msgDiv = $('saveMsg');
+  msgDiv.innerHTML = '';
+
+  // 先存本機
+  const localRecords = JSON.parse(localStorage.getItem('game_records') || '[]');
+  const record = { seat_number: currentSeat, score, game_time: elapsedSeconds, created_at: new Date().toISOString() };
+  localRecords.push(record);
+  localStorage.setItem('game_records', JSON.stringify(localRecords));
+
+  // 嘗試存 Supabase
+  if (supabase) {
+    try {
+      const { error } = await supabase.from('game_records').insert({
+        seat_number: currentSeat,
+        score: score,
+        game_time: elapsedSeconds
+      });
+      if (error) {
+        msgDiv.innerHTML = '<div class="msg msg-info">成績已存到本機。雲端儲存失敗：' + error.message + '</div>';
+      } else {
+        msgDiv.innerHTML = '<div class="msg msg-success">✅ 成績已儲存到雲端！</div>';
+      }
+    } catch (e) {
+      msgDiv.innerHTML = '<div class="msg msg-info">成績已存到本機。無法連線雲端資料庫。</div>';
+    }
+  } else {
+    msgDiv.innerHTML = '<div class="msg msg-info">成績已存到本機。（Supabase 尚未設定金鑰）</div>';
+  }
+
+  // 顯示排行榜
+  await showLeaderboard();
+}
+
+async function showLeaderboard() {
+  const area = $('leaderboardArea');
+  let records = [];
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('game_records')
+        .select('*')
+        .order('score', { ascending: false })
+        .limit(20);
+      if (!error && data) {
+        records = data;
+      }
+    } catch (e) { /* 離線不理 */ }
+  }
+
+  // 合併本機紀錄
+  if (records.length === 0) {
+    records = JSON.parse(localStorage.getItem('game_records') || '[]');
+    records.sort((a, b) => b.score - a.score);
+  }
+
+  if (records.length === 0) {
+    area.innerHTML = '<p style="color:#999;margin-top:12px;">尚無遊戲紀錄，快來玩第一場吧！</p>';
+    return;
+  }
+
+  let html = '<div class="leaderboard"><h3>🏆 排行榜</h3><table><thead><tr><th>排名</th><th>座號</th><th>分數</th><th>時間(秒)</th></tr></thead><tbody>';
+  const top = records.slice(0, 10);
+  top.forEach((r, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    html += `<tr><td>${medal} ${i + 1}</td><td>${r.seat_number}</td><td>${r.score}</td><td>${r.game_time}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  area.innerHTML = html;
+}
+
+function resetGame() {
+  hide($('resultScreen'));
+  show($('gameScreen'));
+
+  matchedPairs = 0;
+  flippedCards = [];
+  elapsedSeconds = 0;
+  isLocked = false;
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  startTime = null;
+
+  $('scoreDisplay').textContent = '800';
+  $('timer').textContent = '00:00';
+
+  buildCards();
+  renderGrid();
+}
+
+function backToStart() {
+  hide($('gameScreen'));
+  hide($('resultScreen'));
+  show($('startScreen'));
+
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  startTime = null;
+  matchedPairs = 0;
+  flippedCards = [];
+  isLocked = false;
+
+  showLeaderboard();
+}
+
+// ============================================================
+// 初始載入
+// ============================================================
+showLeaderboard();
+
+// Enter 鍵開始遊戲
+$('seatInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame();
+});
+
+// 顯示 Supabase 設定狀態
+if (!supabase) {
+  console.log('Supabase 未設定。請在 index.html 中設定 SUPABASE_ANON_KEY。');
+  console.log('到 https://supabase.com/dashboard/project/dwfrqidfhpixqsjmdqzz/settings/api 複製 anon key');
+}
+</script>
+</body>
+</html>
