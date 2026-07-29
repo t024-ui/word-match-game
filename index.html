@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>英文單字配對遊戲</title>
+<title>昆蟲變態對對碰</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +28,7 @@ body {
 }
 
 .header {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
   color: white;
   padding: 24px;
   text-align: center;
@@ -124,8 +124,8 @@ body {
   transform: rotateY(180deg);
 }
 
-.card.en .card-front { background: linear-gradient(145deg, #4facfe, #00f2fe); color: white; }
-.card.zh .card-front { background: linear-gradient(145deg, #f093fb, #f5576c); color: white; }
+.card.insect .card-front { background: linear-gradient(145deg, #11998e, #38ef7d); color: white; }
+.card.meta .card-front { background: linear-gradient(145deg, #667eea, #764ba2); color: white; }
 
 .card.matched { pointer-events: none; }
 .card.matched .card-inner { transform: rotateY(180deg); }
@@ -206,8 +206,8 @@ body {
 
 <div class="container">
   <div class="header">
-    <h1>🎮 英文單字配對遊戲</h1>
-    <p>翻開卡片，找出英文與中文的配對！</p>
+    <h1>🦗 昆蟲變態對對碰</h1>
+    <p>翻開卡片，將昆蟲和牠的變態過程配對！</p>
   </div>
   <div class="main">
 
@@ -216,7 +216,7 @@ body {
       <label for="seatInput">請輸入你的班級座號</label>
       <input type="text" id="seatInput" placeholder="例如：5 或 12" maxlength="10" autocomplete="off">
       <div style="margin-top:20px">
-        <button class="btn btn-primary" onclick="startGame()">開始遊戲 🎯</button>
+        <button class="btn btn-primary" onclick="startGame()">開始配對 🦗</button>
       </div>
       <div id="leaderboardArea" style="margin-top:24px"></div>
     </div>
@@ -269,17 +269,17 @@ if (SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
 }
 
 // ============================================================
-// 單字配對資料
+// 昆蟲變態配對資料
 // ============================================================
 const wordPairs = [
-  { en: 'apple', zh: '蘋果' },
-  { en: 'book', zh: '書本' },
-  { en: 'cat', zh: '貓咪' },
-  { en: 'dog', zh: '小狗' },
-  { en: 'sun', zh: '太陽' },
-  { en: 'star', zh: '星星' },
-  { en: 'water', zh: '水' },
-  { en: 'school', zh: '學校' }
+  { insect: '蝴蝶', meta: '毛毛蟲結蛹羽化成蝶' },
+  { insect: '蜜蜂', meta: '幼蟲在蜂巢中化蛹' },
+  { insect: '獨角仙', meta: '雞母蟲在土中化蛹' },
+  { insect: '蚊子', meta: '孑孓在水中化蛹羽化' },
+  { insect: '蟬', meta: '若蟲在土中生活多年' },
+  { insect: '蜻蜓', meta: '水蠆在水中長大羽化' },
+  { insect: '蝗蟲', meta: '若蟲像成蟲逐步長翅' },
+  { insect: '螳螂', meta: '若蟲與成蟲外形相似' }
 ];
 
 // ============================================================
@@ -365,8 +365,8 @@ function startGame() {
 function buildCards() {
   cards = [];
   wordPairs.forEach((pair, idx) => {
-    cards.push({ id: idx, type: 'en', text: pair.en, pairId: idx });
-    cards.push({ id: idx, type: 'zh', text: pair.zh, pairId: idx });
+    cards.push({ id: idx, type: 'insect', text: pair.insect, pairId: idx });
+    cards.push({ id: idx, type: 'meta', text: pair.meta, pairId: idx });
   });
   cards = shuffle(cards);
 }

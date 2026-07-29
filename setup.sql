@@ -1,5 +1,5 @@
 -- ============================================
--- 英文單字配對遊戲 - Supabase 資料表設定
+-- 昆蟲變態對對碰 - Supabase 資料表設定
 -- ============================================
 -- 請在 Supabase SQL Editor 中執行這段 SQL
 -- https://supabase.com/dashboard/project/dwfrqidfhpixqsjmdqzz/sql/new
